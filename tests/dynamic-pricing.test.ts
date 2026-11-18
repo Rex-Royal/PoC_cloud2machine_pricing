@@ -8,6 +8,7 @@ import assert from 'node:assert/strict';
 
 import { AuthService, FtpService, parseUpstreamBaseUrl, TbService } from '#cloud-client';
 import {
+  ALL_PRICE_PARAM_CODES,
   ApiBasePath,
   appendCommandToCmdStack,
   applyDynamicPricingRule,
@@ -27,6 +28,7 @@ import {
   parseMachineConfig,
   PricingPresetId,
   readStoredZipArchive,
+  updateProductPrice,
   updateSingleProductParam,
   validatePriceListAgainstMachine,
 } from '#firmware-core';
@@ -159,6 +161,72 @@ describe('Dynamic Pricing — Pricing Rules & 32-Parameter Export', () => {
     const reparsed = parseMachineConfig(updatedRaw);
     assert.equal(reparsed.products.find((p) => p.id === 1)?.params['47'], 480);
     assert.equal(reparsed.products.find((p) => p.id === 1)?.params['48'], 480);
+  });
+
+  it('updateProductPrice sets all 24 price fields (47..64, 91..96) while preserving PLU/MDB codes (65..70, 97..98)', () => {
+    const configWithPluCodes = makeRawConfig({
+      products: [
+        {
+          id: 1,
+          name: 'Coffee',
+          productType: '2',
+          attributes: [
+            { name: 'RecipeID', value: '1' },
+            { name: 'M0801', value: '2' },
+            { name: 'ProdName', value: 'Coffee' },
+            { name: 'M1401', value: '350' },
+            { name: 'M1406', value: '520' },
+            { name: 'M1411', value: '0' },
+            { name: 'M1601', value: '1' },
+            { name: 'M1602', value: '1' },
+            { name: 'M1603', value: '1' },
+            { name: 'M1604', value: '1' },
+            { name: 'M1606', value: '1' },
+            { name: 'M1607', value: '1' },
+            { name: 'M1608', value: '1' },
+            { name: 'M1609', value: '1' },
+          ],
+        },
+        {
+          id: 2,
+          name: 'Espresso',
+          productType: '4',
+          attributes: [
+            { name: 'RecipeID', value: '2' },
+            { name: 'M0801', value: '4' },
+            { name: 'ProdName', value: 'Espresso' },
+            { name: 'M1401', value: '400' },
+            { name: 'M1406', value: '550' },
+            { name: 'M1601', value: '2' },
+          ],
+        },
+      ],
+    });
+
+    assert.equal(ALL_PRICE_PARAM_CODES.length, 24);
+
+    const layout = parseMachineConfig(configWithPluCodes);
+    const updated = updateProductPrice(layout, 1, 900);
+    const exported = exportToPriceListJson(updated, { ignoreRecipeMatch: false });
+
+    const expectedPriceKeys = [
+      '47', '48', '49', '50', '51', '52',
+      '53', '54', '55', '56', '57', '58',
+      '59', '60', '61', '62', '63', '64',
+      '91', '92', '93', '94', '95', '96',
+    ] as const;
+    for (const key of expectedPriceKeys) {
+      assert.equal(exported.products[0][key], 900, `Price key "${key}" must be 900`);
+    }
+
+    const expectedPluKeys = ['65', '66', '67', '68', '69', '70', '97', '98'] as const;
+    for (const key of expectedPluKeys) {
+      assert.equal(exported.products[0][key], 1, `PLU/MDB code "${key}" must remain 1`);
+    }
+
+    assert.equal(exported.products[1]['47'], 400, 'Other product slots must remain unchanged');
+    assert.equal(exported.products[1]['50'], 550);
+    assert.equal(exported.products[1]['65'], 2);
   });
 });
 

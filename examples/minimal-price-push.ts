@@ -8,7 +8,7 @@
  *   TB_BASE_URL=https://iot.rex-royal.ch \
  *   FTP_BASE_URL=https://iot.rex-royal.ch:8787 \
  *   TB_USERNAME=you@example.com TB_PASSWORD=... \
- *   CUSTOMER_ID=<uuid> DEVICE_ID=<uuid> NEW_SINGLE_MINOR=420 \
+ *   CUSTOMER_ID=<uuid> DEVICE_ID=<uuid> NEW_PRICE_MINOR=420 \
  *   node --experimental-transform-types examples/minimal-price-push.ts
  */
 
@@ -19,10 +19,8 @@ import {
   createPartialPricingBackupZip,
   exportToPriceListJson,
   parseMachineConfig,
-  PRICE_PARAM_PL1_DOUBLE,
-  PRICE_PARAM_PL1_SINGLE,
   SAMPLE_LAYOUT_3X5,
-  updateSingleProductParam,
+  updateProductPrice,
   validatePriceListAgainstMachine,
 } from '#firmware-core';
 import { CoffeeMachineService } from '#fleet-sync';
@@ -30,14 +28,15 @@ import { CoffeeMachineService } from '#fleet-sync';
 const isDemo = process.argv.includes('--demo') || !process.env.TB_USERNAME;
 
 async function main(): Promise<void> {
-  const newSingleMinor = Number.parseInt(process.env.NEW_SINGLE_MINOR || '420', 10);
-  const newDoubleMinor = Number.parseInt(process.env.NEW_DOUBLE_MINOR || '580', 10);
+  const newPriceMinor = Number.parseInt(
+    process.env.NEW_PRICE_MINOR || process.env.NEW_SINGLE_MINOR || '420',
+    10
+  );
 
   if (isDemo) {
     const customerId = '00000000-0000-4000-8000-000000000001';
     const layout = parseMachineConfig(SAMPLE_LAYOUT_3X5);
-    let updated = updateSingleProductParam(layout, 1, PRICE_PARAM_PL1_DOUBLE, newDoubleMinor);
-    updated = updateSingleProductParam(updated, 1, PRICE_PARAM_PL1_SINGLE, newSingleMinor);
+    const updated = updateProductPrice(layout, 1, newPriceMinor);
 
     const priceList = exportToPriceListJson(updated, { ignoreRecipeMatch: false });
     const validation = validatePriceListAgainstMachine(priceList, layout);
@@ -71,7 +70,7 @@ async function main(): Promise<void> {
   // 2. Download Config/{deviceId}/config.json and validate price update
   const rawConfig = await CoffeeMachineService.downloadConfigJson(deviceId);
   const layout = parseMachineConfig(rawConfig);
-  const updated = updateSingleProductParam(layout, 1, PRICE_PARAM_PL1_SINGLE, newSingleMinor);
+  const updated = updateProductPrice(layout, 1, newPriceMinor);
   const priceList = exportToPriceListJson(updated);
   const validation = validatePriceListAgainstMachine(priceList, layout);
   if (!validation.valid) throw new Error(validation.abortReason || 'Layout mismatch');
