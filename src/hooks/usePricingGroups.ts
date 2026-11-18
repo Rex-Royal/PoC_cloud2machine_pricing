@@ -17,7 +17,7 @@ import {
 import {
   exportToPriceListJson,
   parseDecimalToMinorPrice,
-  updateSingleProductParam,
+  updateProductPrice,
 } from '#firmware-core';
 import type { TranslationKey } from '../i18n/translations.ts';
 import { DynamicPricingService } from '#fleet-sync';
@@ -27,7 +27,6 @@ import {
   type FleetMachine,
   type MachineLayout,
   type MachineSyncState,
-  type PriceParamCode,
   type ScheduledPricingJob,
   type TrackedDeploymentBatch,
 } from '#firmware-core';
@@ -288,8 +287,8 @@ export function usePricingGroups(options: UsePricingGroupsOptions) {
     });
   }, [activeLayoutKey]);
 
-  const handleCellPriceChange = useCallback(
-    (slotId: number, paramCode: PriceParamCode, decimalText: string) => {
+  const handleProductPriceChange = useCallback(
+    (slotId: number, decimalText: string) => {
       if (!currentEditedLayout || !activeLayoutKey) return;
       setDeployFeedbackByGroup((prev) => {
         if (!prev[activeLayoutKey]) return prev;
@@ -298,13 +297,7 @@ export function usePricingGroups(options: UsePricingGroupsOptions) {
         return next;
       });
       const minorValue = parseDecimalToMinorPrice(decimalText);
-      const nextLayout = updateSingleProductParam(
-        currentEditedLayout,
-        slotId,
-        paramCode,
-        String(minorValue),
-        { syncGrinders: true }
-      );
+      const nextLayout = updateProductPrice(currentEditedLayout, slotId, minorValue);
       setEditedLayoutByGroup((prev) => ({
         ...prev,
         [activeLayoutKey]: nextLayout,
@@ -514,7 +507,7 @@ export function usePricingGroups(options: UsePricingGroupsOptions) {
     setDeployFeedbackByGroup,
     isDispatching,
     getEffectiveMachineLayout,
-    handleCellPriceChange,
+    handleProductPriceChange,
     handleResetPrices,
     handleMoveMachineToGroup,
     handleMoveMachineToNewGroup,

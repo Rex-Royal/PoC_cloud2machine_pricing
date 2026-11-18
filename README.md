@@ -99,7 +99,7 @@ PoC_cloud2machine_pricing/
 │   │   └── pricing/
 │   │       ├── OfflineQueuePanel.tsx         # Pending cmdStack queue, cleanup status & baseline restore UI
 │   │       ├── PricingGroupsPanel.tsx        # Layout-clustered groups, online readiness & schedule controls
-│   │       ├── ProductsPricingTable.tsx      # Per-slot PL1 Single/Double price editor & deploy triggers
+│   │       ├── ProductsPricingTable.tsx      # Per-product single-price editor (updates all 24 price fields) & deploy triggers
 │   │       └── UnavailableMachinesBanner.tsx # Warning banner for machines missing FTP config
 │   ├── hooks/                                # React Query polling & client workspace hooks
 │   │   ├── useAuthSession.ts                 # Login, React Query JWT keepalive & local session persistence
