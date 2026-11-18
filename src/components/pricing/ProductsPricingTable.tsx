@@ -1,14 +1,15 @@
 'use client';
 
 import React from 'react';
-import { formatMinorPrice } from '#firmware-core';
-import type { TranslationKey } from '../../i18n/translations.ts';
-import type {
-  FleetMachine,
-  MachineLayout,
-  PriceParamCode,
-  ProductSlot,
+import {
+  ALL_PRICE_PARAM_CODES,
+  formatMinorPrice,
+  PRICE_PARAM_PL1_SINGLE,
+  type FleetMachine,
+  type MachineLayout,
+  type ProductSlot,
 } from '#firmware-core';
+import type { TranslationKey } from '../../i18n/translations.ts';
 import type { PricingGroupCluster } from './PricingGroupsPanel.tsx';
 
 function getMachineLabel(m: FleetMachine): string {
@@ -33,7 +34,7 @@ export interface ProductsPricingTableProps {
   deployFeedback?: DeployFeedback | null;
   isLoadingConfigs: boolean;
   isDispatching: boolean;
-  onCellPriceChange: (slotId: number, paramCode: PriceParamCode, decimalText: string) => void;
+  onProductPriceChange: (slotId: number, decimalText: string) => void;
   onResetPrices: () => void;
   onDeployCluster: () => void;
   onFetchClusterPriceList?: () => void;
@@ -43,35 +44,44 @@ export interface ProductsPricingTableProps {
 interface PriceCellProps {
   prod: ProductSlot;
   baseProd: ProductSlot | undefined;
-  paramCode: PriceParamCode;
-  ariaLabel: string;
-  onChange: (slotId: number, paramCode: PriceParamCode, decimalText: string) => void;
+  currency: string;
+  onChange: (slotId: number, decimalText: string) => void;
 }
 
-function PriceCell({ prod, baseProd, paramCode, ariaLabel, onChange }: PriceCellProps) {
-  const rawMinor = Number(prod.params[paramCode] ?? 0);
-  const baseMinor = Number(baseProd?.params?.[paramCode] ?? rawMinor);
-  const isModified = rawMinor !== baseMinor;
+function PriceCell({ prod, baseProd, currency, onChange }: PriceCellProps) {
+  const rawMinor = Number(prod.params[PRICE_PARAM_PL1_SINGLE] ?? 0);
+  const baseMinor = Number(baseProd?.params?.[PRICE_PARAM_PL1_SINGLE] ?? rawMinor);
+  const hasAnyPriceParamChanged =
+    baseProd !== undefined &&
+    ALL_PRICE_PARAM_CODES.some(
+      (code) => Number(prod.params[code] ?? 0) !== Number(baseProd.params[code] ?? 0)
+    );
+  const isModified = rawMinor !== baseMinor || hasAnyPriceParamChanged;
 
   return (
     <td className={isModified ? 'cell-modified' : ''}>
       <input
         type="number"
+        name={`price-${prod.id}`}
+        inputMode="decimal"
         step="0.05"
         min="0"
         className="price-input"
-        aria-label={ariaLabel}
+        aria-label={`${prod.displayName} Price (${currency})`}
         value={formatMinorPrice(rawMinor)}
-        onChange={(e) => onChange(prod.id, paramCode, e.target.value)}
+        onChange={(e) => onChange(prod.id, e.target.value)}
       />
-      {isModified && <span className="cell-was">was {formatMinorPrice(baseMinor)}</span>}
+      {rawMinor !== baseMinor && (
+        <span className="cell-was">was {formatMinorPrice(baseMinor)}</span>
+      )}
     </td>
   );
 }
 
 /**
  * Step 2c Panel 2: Products & Prices matrix table for the active Pricing Group,
- * supporting PL1 Single/Double edits, changed-cell highlights, Reset to Baseline, and Deploy.
+ * supporting single-input product pricing across all 24 price fields, changed-cell highlights,
+ * Reset to Baseline, and Deploy.
  */
 export function ProductsPricingTable({
   cluster,
@@ -83,7 +93,7 @@ export function ProductsPricingTable({
   deployFeedback,
   isLoadingConfigs,
   isDispatching,
-  onCellPriceChange,
+  onProductPriceChange,
   onResetPrices,
   onDeployCluster,
   onFetchClusterPriceList,
@@ -176,11 +186,8 @@ export function ProductsPricingTable({
                   </th>
                   <th scope="col">Product</th>
                   <th scope="col">Category</th>
-                  <th scope="col" style={{ width: '150px' }}>
-                    PL1 Single ({currency})
-                  </th>
-                  <th scope="col" style={{ width: '150px' }}>
-                    PL1 Double ({currency})
+                  <th scope="col" style={{ width: '160px' }}>
+                    Price ({currency})
                   </th>
                 </tr>
               </thead>
@@ -217,16 +224,8 @@ export function ProductsPricingTable({
                       <PriceCell
                         prod={prod}
                         baseProd={baseProd}
-                        paramCode="47"
-                        ariaLabel={`${prod.displayName} PL1 Single Price`}
-                        onChange={onCellPriceChange}
-                      />
-                      <PriceCell
-                        prod={prod}
-                        baseProd={baseProd}
-                        paramCode="50"
-                        ariaLabel={`${prod.displayName} PL1 Double Price`}
-                        onChange={onCellPriceChange}
+                        currency={currency}
+                        onChange={onProductPriceChange}
                       />
                     </tr>
                   );

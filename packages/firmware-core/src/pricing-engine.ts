@@ -50,6 +50,9 @@ const PL1_TO_PL3_MAP = buildPl1Mapping(PriceListGroup.PL3);
 const VALID_PRICE_PARAM_CODES: ReadonlySet<string> = new Set(
   PRICE_PARAM_SPECS.map((s) => s.paramId)
 );
+export const ALL_PRICE_PARAM_CODES: readonly PriceParamCode[] = Object.freeze(
+  PRICE_PARAM_SPECS.filter((s) => s.isPrice).map((s) => s.paramId)
+);
 
 export const DYNAMIC_PRICING_PRESETS: readonly DynamicPricingRule[] = Object.freeze([
   {
@@ -263,6 +266,39 @@ export function updateSingleProductParam(
       for (const linkedKey of linked) {
         nextParams[linkedKey] = clamped;
       }
+    }
+    return {
+      ...slot,
+      params: nextParams,
+    };
+  });
+
+  return {
+    ...machineLayout,
+    products: updatedProducts,
+  };
+}
+
+/**
+ * Sets a single uniform minor-unit price across all 24 price parameters (`47..64`, `91..96`:
+ * PL1/PL2/PL3 × Gr1/Gr2/Gr3/Decaf × Single/Double) for a product slot, while preserving
+ * non-price Payment / MDB / PLU selection codes (`65..70`, `97..98`).
+ */
+export function updateProductPrice(
+  machineLayout: MachineLayout,
+  productId: number | string,
+  newMinorValue: number | string
+): MachineLayout {
+  const targetId = Number.parseInt(String(productId), 10);
+  const clamped = roundAndClampPrice(Number(newMinorValue) || 0, 1);
+
+  const updatedProducts = machineLayout.products.map((slot) => {
+    if (slot.id !== targetId) {
+      return slot;
+    }
+    const nextParams: PriceParamsRecord = { ...slot.params };
+    for (const code of ALL_PRICE_PARAM_CODES) {
+      nextParams[code] = clamped;
     }
     return {
       ...slot,
