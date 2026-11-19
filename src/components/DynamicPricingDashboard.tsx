@@ -284,6 +284,7 @@ export default function DynamicPricingDashboard() {
                   isLoadingConfigs={fleet.isLoadingConfigs}
                   isDispatching={pricing.isDispatching}
                   onProductPriceChange={pricing.handleProductPriceChange}
+                  onDownloadPricingFile={pricing.handleDownloadPricingFile}
                   onResetPrices={pricing.handleResetPrices}
                   onDeployCluster={pricing.handleDispatchCluster}
                   onFetchClusterPriceList={() =>

@@ -7,6 +7,7 @@ import {
   PRICE_PARAM_PL1_SINGLE,
   type FleetMachine,
   type MachineLayout,
+  type PricingDownloadFormat,
   type ProductSlot,
 } from '#firmware-core';
 import type { TranslationKey } from '../../i18n/translations.ts';
@@ -35,6 +36,7 @@ export interface ProductsPricingTableProps {
   isLoadingConfigs: boolean;
   isDispatching: boolean;
   onProductPriceChange: (slotId: number, decimalText: string) => void;
+  onDownloadPricingFile: (format: PricingDownloadFormat) => void;
   onResetPrices: () => void;
   onDeployCluster: () => void;
   onFetchClusterPriceList?: () => void;
@@ -94,6 +96,7 @@ export function ProductsPricingTable({
   isLoadingConfigs,
   isDispatching,
   onProductPriceChange,
+  onDownloadPricingFile,
   onResetPrices,
   onDeployCluster,
   onFetchClusterPriceList,
@@ -153,6 +156,22 @@ export function ProductsPricingTable({
                 onClick={onResetPrices}
               >
                 Reset
+              </button>
+              <button
+                type="button"
+                className="btn btn-secondary btn-sm"
+                aria-label={`Download ${cluster.zipFileName}`}
+                onClick={() => onDownloadPricingFile('zip')}
+              >
+                ⬇ Download .zip
+              </button>
+              <button
+                type="button"
+                className="btn btn-secondary btn-sm"
+                aria-label="Download priceList.json"
+                onClick={() => onDownloadPricingFile('json')}
+              >
+                ⬇ Download .json
               </button>
               <button
                 type="button"
