@@ -13,6 +13,7 @@ import {
   appendCommandToCmdStack,
   applyDynamicPricingRule,
   buildApplyPricingRpcCommand,
+  buildPricingDownloadArtifact,
   clusterMachinesByLayout,
   computePricingDiff,
   createPartialPricingBackupZip,
@@ -24,6 +25,7 @@ import {
   FtpResourceType,
   MachineConfigFile,
   MachineSyncState,
+  MimeType,
   parseCmdStackContent,
   parseMachineConfig,
   PricingPresetId,
@@ -284,6 +286,34 @@ describe('Dynamic Pricing — Partial Backup ZIP & Async cmdStack.json Codecs', 
       pricesMatchTarget: false,
     });
     assert.equal(pendingState, MachineSyncState.Pending);
+  });
+
+  it('buildPricingDownloadArtifact exports safe add_priceList_*.zip and priceList.json downloads', () => {
+    const baseLayout = parseMachineConfig(SAMPLE_CONFIG_3X5);
+    const updated = updateProductPrice(baseLayout, 1, 490);
+    const groupZipName = 'add_priceList_3x5x1_abc_group-1.zip';
+
+    const zipArtifact = buildPricingDownloadArtifact(updated, groupZipName, 'zip', {
+      ignoreRecipeMatch: false,
+    });
+    assert.equal(zipArtifact.fileName, groupZipName);
+    assert.equal(zipArtifact.mimeType, MimeType.Zip);
+    assert.ok(zipArtifact.content instanceof Uint8Array);
+    const extracted = readStoredZipArchive(zipArtifact.content);
+    assert.ok('priceList.json' in extracted);
+    const zipJson = JSON.parse(extracted['priceList.json']);
+    assert.equal(zipJson.products[0]['47'], 490);
+    assert.equal(zipJson.products[0]['96'], 490);
+
+    const jsonArtifact = buildPricingDownloadArtifact(updated, groupZipName, 'json', {
+      ignoreRecipeMatch: false,
+    });
+    assert.equal(jsonArtifact.fileName, 'priceList.json');
+    assert.equal(jsonArtifact.mimeType, MimeType.Json);
+    assert.equal(typeof jsonArtifact.content, 'string');
+    const rawJson = JSON.parse(jsonArtifact.content as string);
+    assert.equal(rawJson.products[0]['47'], 490);
+    assert.equal(rawJson.products[0]['96'], 490);
   });
 });
 
