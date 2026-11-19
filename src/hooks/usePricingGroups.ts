@@ -15,9 +15,11 @@ import {
   validatePriceListAgainstMachine,
 } from '#firmware-core';
 import {
+  buildPricingDownloadArtifact,
   exportToPriceListJson,
   parseDecimalToMinorPrice,
   updateProductPrice,
+  type PricingDownloadFormat,
 } from '#firmware-core';
 import type { TranslationKey } from '../i18n/translations.ts';
 import { DynamicPricingService } from '#fleet-sync';
@@ -306,6 +308,29 @@ export function usePricingGroups(options: UsePricingGroupsOptions) {
     [currentEditedLayout, activeLayoutKey]
   );
 
+  const handleDownloadPricingFile = useCallback(
+    (format: PricingDownloadFormat) => {
+      if (!activeCluster || !currentEditedLayout || typeof document === 'undefined') return;
+      const artifact = buildPricingDownloadArtifact(
+        currentEditedLayout,
+        activeCluster.zipFileName,
+        format,
+        { ignoreRecipeMatch: false }
+      );
+      const blob = new Blob([artifact.content as BlobPart], { type: artifact.mimeType });
+      const objectUrl = URL.createObjectURL(blob);
+      const anchor = document.createElement('a');
+      anchor.href = objectUrl;
+      anchor.download = artifact.fileName;
+      anchor.rel = 'noopener';
+      document.body.append(anchor);
+      anchor.click();
+      anchor.remove();
+      setTimeout(() => URL.revokeObjectURL(objectUrl), 1000);
+    },
+    [activeCluster, currentEditedLayout]
+  );
+
   /**
    * Consolidated single sync/fetch action for PricingGroupsPanel ("Sync Current Price Lists")
    * and ProductsPricingTable ("Fetch Current Price List").
@@ -508,6 +533,7 @@ export function usePricingGroups(options: UsePricingGroupsOptions) {
     isDispatching,
     getEffectiveMachineLayout,
     handleProductPriceChange,
+    handleDownloadPricingFile,
     handleResetPrices,
     handleMoveMachineToGroup,
     handleMoveMachineToNewGroup,

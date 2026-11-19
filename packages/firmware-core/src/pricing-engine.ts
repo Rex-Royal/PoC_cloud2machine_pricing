@@ -6,6 +6,8 @@
 
 import {
   BeverageFilter,
+  MachineConfigFile,
+  MimeType,
   PriceListGroup,
   PricingPresetId,
   PricingRuleMode,
@@ -21,6 +23,7 @@ import {
   type SlotParamChange,
 } from './types.ts';
 import { PRICE_PARAM_SPECS } from './layout-engine.ts';
+import { createPartialPricingBackupZip } from './zip-codec.ts';
 
 export const MILK_PRESET_IDS: ReadonlySet<number> = new Set([5, 6, 7, 8, 9, 14, 15, 16, 20, 24]);
 
@@ -336,6 +339,42 @@ export function exportToPriceListJson(
     categories: machineLayout.categories,
     ignoreRecipeMatch,
     products,
+  };
+}
+
+export type PricingDownloadFormat = 'zip' | 'json';
+
+export interface PricingDownloadArtifact {
+  readonly fileName: string;
+  readonly mimeType: MimeType;
+  readonly content: Uint8Array | string;
+}
+
+/**
+ * Builds a downloadable pricing file for the given layout:
+ * - `'zip'`: partial backup archive keeping the safe group ZIP name (`add_priceList_*.zip`)
+ *   with `priceList.json` at the root.
+ * - `'json'`: raw pretty-printed `priceList.json` file.
+ */
+export function buildPricingDownloadArtifact(
+  machineLayout: MachineLayout,
+  zipFileName: string,
+  format: PricingDownloadFormat,
+  options: { ignoreRecipeMatch?: boolean } = {}
+): PricingDownloadArtifact {
+  const priceListJson = exportToPriceListJson(machineLayout, options);
+  if (format === 'json') {
+    return {
+      fileName: MachineConfigFile.PriceListJson,
+      mimeType: MimeType.Json,
+      content: JSON.stringify(priceListJson, null, 2),
+    };
+  }
+  const pkg = createPartialPricingBackupZip(priceListJson, zipFileName);
+  return {
+    fileName: pkg.fileName,
+    mimeType: MimeType.Zip,
+    content: pkg.zipBytes,
   };
 }
 
